@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import category, products
+from app.routers import auth, category, products
 
 app = FastAPI()
 
@@ -9,5 +9,6 @@ async def welcome() -> dict:
     return {'message': 'My e-commerce app'}
 
 
+app.include_router(auth.router)
 app.include_router(category.router)
 app.include_router(products.router)
