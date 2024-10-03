@@ -25,7 +25,4 @@ class CreateUser(BaseModel):
 
 class CreateReview(BaseModel):
     comment: str
-
-
-class CreateRating(BaseModel):
     grade: int

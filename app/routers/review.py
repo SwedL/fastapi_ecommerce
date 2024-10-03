@@ -10,7 +10,7 @@ from .auth import get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import insert, select, update
 from app.backend.db_depends import get_db
-from app.schemas import CreateProduct, CreateReview, CreateRating
+from app.schemas import CreateProduct, CreateReview
 from slugify import slugify
 
 router = APIRouter(prefix='/reviews', tags=['reviews'])
@@ -40,7 +40,7 @@ async def all_reviews(db: Annotated[AsyncSession, Depends(get_db)]):
 
 @router.post('/add_review')
 async def add_review(db: Annotated[AsyncSession, Depends(get_db)], get_user: Annotated[dict, Depends(get_current_user)],
-                     product_slug: str, create_review: CreateReview, create_rating: CreateRating):
+                     product_slug: str, create_review: CreateReview):
 
     product = await db.scalar(select(Product).filter(Product.slug == product_slug, Product.is_active == True))
     if product is None:
@@ -50,7 +50,7 @@ async def add_review(db: Annotated[AsyncSession, Depends(get_db)], get_user: Ann
         )
 
     current_rating = await db.execute(insert(Rating).values(
-        grade=create_rating.grade,
+        grade=create_review.grade,
         user_id=get_user.get('id'),
         product_id=product.id,
     ))
