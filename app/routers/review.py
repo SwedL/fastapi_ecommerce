@@ -4,8 +4,8 @@ from app.models import *
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from sqlalchemy import insert, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy import insert, select, update, join
+from sqlalchemy.orm import Session, join
 from .auth import get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import insert, select, update
@@ -27,15 +27,24 @@ async def all_reviews(db: Annotated[AsyncSession, Depends(get_db)]):
     return reviews.all()
 
 
-# @router.get('/products_reviews')
-# async def products_reviews(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str):
-#     reviews = await db.scalars(select(Review).where(Review.is_active == True))
-#     if reviews is None:
-#         return HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail='There are no reviews'
-#         )
-#     return reviews.all()
+@router.get('/products_reviews')
+async def products_reviews(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str):
+    product = await db.scalar(select(Product.id).filter(Product.slug == product_slug))
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='There is no such product',
+        )
+    query = select(Review.comment, Rating.grade).join(Rating).where(Review.product_id == product, Review.is_active == True)
+    reviews = await db.execute(query)
+    response = {f'Отзыв {n}': f'{k[0]}. Оценка: {k[1]}' for n, k in enumerate(reviews, start=1)}
+
+    if not len(response):
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='There are no reviews'
+        )
+    return response
 
 
 @router.post('/add_review')
