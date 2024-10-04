@@ -1,7 +1,8 @@
-from app.backend.db import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+
+from app.backend.db import Base
 
 
 class Review(Base):

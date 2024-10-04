@@ -1,6 +1,6 @@
+from sqlalchemy import Boolean, Column, ForeignKey, Integer
+
 from app.backend.db import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean
-from sqlalchemy.orm import relationship
 
 
 class Rating(Base):

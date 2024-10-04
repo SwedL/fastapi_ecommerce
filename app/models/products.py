@@ -1,6 +1,7 @@
-from app.backend.db import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, Float
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
+from app.backend.db import Base
 
 
 class Product(Base):

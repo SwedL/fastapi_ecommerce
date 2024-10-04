@@ -1,14 +1,14 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.backend.db_depends import get_db
 from app.models.user import User
-from .auth import get_current_user
 
+from .auth import get_current_user
 
 router = APIRouter(prefix='/permission', tags=['permission'])
 

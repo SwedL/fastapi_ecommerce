@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, status, HTTPException
 from typing import Annotated
-from app.models import *
-from sqlalchemy import insert, select, update
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import insert, select, update
-from app.backend.db_depends import get_db
-from app.schemas import CreateProduct
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from slugify import slugify
+from sqlalchemy import insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.backend.db_depends import get_db
+from app.models import *
+from app.schemas import CreateProduct
 
 router = APIRouter(prefix='/products', tags=['products'])
 

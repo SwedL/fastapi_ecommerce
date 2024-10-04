@@ -1,17 +1,14 @@
-from fastapi import APIRouter, Depends, status, HTTPException
 from typing import Annotated
-from app.models import *
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import datetime, timedelta
-from jose import jwt, JWTError
-from sqlalchemy import insert, select, update, join
-from sqlalchemy.orm import Session, join
-from .auth import get_current_user
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.backend.db_depends import get_db
-from app.schemas import CreateProduct, CreateReview
-from slugify import slugify
+from app.models import Product, Rating, Review
+from app.schemas import CreateReview
+
+from .auth import get_current_user
 
 router = APIRouter(prefix='/reviews', tags=['reviews'])
 
@@ -22,7 +19,7 @@ async def all_reviews(db: Annotated[AsyncSession, Depends(get_db)]):
     if reviews is None:
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='There are no reviews'
+            detail='There are no reviews',
         )
     return reviews.all()
 
@@ -38,12 +35,12 @@ async def products_reviews(db: Annotated[AsyncSession, Depends(get_db)], product
     query = select(Review.comment, Rating.grade).join(Rating).where(Review.product_id == product,
                                                                     Review.is_active == True)
     reviews = await db.execute(query)
-    response = {f'Отзыв {n}': f'{k[0]}. Оценка: {k[1]}' for n, k in enumerate(reviews, start=1)}
+    response = {k: v for k, v in reviews}  # ответ клиенту (key - отзыв, value - оценка)
 
     if not len(response):
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='There are no reviews'
+            detail='There are no reviews',
         )
     return response
 
@@ -70,17 +67,14 @@ async def add_review(db: Annotated[AsyncSession, Depends(get_db)], get_user: Ann
                                            comment=create_review.comment,
                                            ))
 
-    all_reviews_current_product = await db.scalars(select(Review).where(Review.product_id == product.id))
-    all_id_ratings_current_product = [rev_cur_prod.rating_id for rev_cur_prod in all_reviews_current_product.all()]
-    all_ratings_current_product = await db.scalars(
-        select(Rating).filter(Rating.id.in_(all_id_ratings_current_product), Rating.is_active == True))
-    all_grade = [r.grade for r in all_ratings_current_product.all()]
+    # пересчитываем средний рейтинг товара
+    all_ratings_review_product = await db.scalars(select(Rating).where(Rating.product_id == product.id,
+                                                                       Rating.is_active == True))
+    all_grade = [r.grade for r in all_ratings_review_product.all()]
     avg_rating = round(sum(all_grade) / len(all_grade), 1)
-    await db.execute(update(Product).where(Product.id == product.id).values(
-        rating=avg_rating,
-    ))
-
+    await db.execute(update(Product).where(Product.id == product.id).values(rating=avg_rating))
     await db.commit()
+
     return {
         'status_code': status.HTTP_201_CREATED,
         'transaction': 'Successful',
@@ -94,31 +88,27 @@ async def delete_reviews(db: Annotated[AsyncSession, Depends(get_db)],
     if not get_user.get('is_admin'):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You don't have admin permission"
+            detail="You don't have admin permission",
         )
 
     review_for_deletion = await db.scalar(select(Review).where(Review.id == review_id, Review.is_active == True))
     if review_for_deletion is None:
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='There is no review'
+            detail='There is no review',
         )
-    await db.execute(update(Review).where(Review.id == review_id).values(
-        is_active=False,
-    ))
-    await db.execute(update(Rating).where(Rating.id == review_for_deletion.rating_id).values(
-        is_active=False,
-    ))
-    # пересчитываем рейтинг без учёта удалённого отзыва
-    all_ratings_review_product = await db.scalars(select(Rating).where(
-        Rating.product_id == review_for_deletion.product_id, Rating.is_active == True
-    ))
+
+    await db.execute(update(Review).where(Review.id == review_id).values(is_active=False))
+    await db.execute(update(Rating).where(Rating.id == review_for_deletion.rating_id).values(is_active=False))
+
+    # пересчитываем средний рейтинг товара без учёта удалённого отзыва
+    all_ratings_review_product = await db.scalars(select(Rating).where(Rating.product_id == review_for_deletion.product_id,
+                                                                       Rating.is_active == True))
     all_grade = [r.grade for r in all_ratings_review_product.all()]
     avg_rating = round(sum(all_grade) / len(all_grade), 1)
-    await db.execute(update(Product).where(Product.id == review_for_deletion.product_id).values(
-        rating=avg_rating,
-    ))
+    await db.execute(update(Product).where(Product.id == review_for_deletion.product_id).values(rating=avg_rating))
     await db.commit()
+
     return {
         'status_code': status.HTTP_200_OK,
         'transaction': 'Review delete is successful',

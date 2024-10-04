@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
-from jose import jwt, JWTError
-from sqlalchemy import select, insert, update
 from typing import Annotated
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from passlib.context import CryptContext
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy import insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.backend.db_depends import get_db
 from app.models.user import User
 from app.schemas import CreateUser
-from app.backend.db_depends import get_db
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
